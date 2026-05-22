@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8" />
+    <title>Base64 → PDF</title>
+
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #0f9d58, #34a853);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px auto;
+            max-width: 800px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            background: #e0e0e0;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab.active {
+            background: #0f9d58;
+            color: white;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            resize: none;
+        }
+
+        button {
+            background: #0f9d58;
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #0c7c43;
+        }
+
+        .info-btn {
+            background: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .info-box {
+            background: #f1f8f4;
+            border-left: 4px solid #0f9d58;
+            padding: 10px;
+            margin-bottom: 15px;
+            display: none;
+            white-space: pre-wrap;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📄 Converter Base64 para PDF</h1>
+
+<div class="container">
+
+    <!-- INFO (só aparece no JSON) -->
+    <div id="infoSection">
+        <button class="info-btn" onclick="toggleInfo()">ℹ️ Ver formato do payload</button>
+
+        <div id="infoBox" class="info-box">
+{
+  "DocumentNumber": "ZGAC DLOSSJKLD/5",
+  "ATCUD": "PSLPSLCPP-5",
+  "ATDocCodeID": "1107986025",
+  "StatusCode": 200,
+  "StatusMessage": "Mensagem de estado",
+  "PDF": "BASE64_PDF_AQUI",
+  "MovementStartTime": "2026-05-13T08:22:53.692Z"
+}
+        </div>
+    </div>
+
+    <!-- SWITCH -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(1)">JSON</div>
+        <div class="tab" onclick="switchTab(2)">Base64</div>
+    </div>
+
+    <!-- TAB JSON -->
+    <div id="tab1">
+        <textarea id="jsonInput" placeholder="Cola aqui o JSON"></textarea>
+        <button onclick="convertFromJSON()">Converter JSON → PDF</button>
+    </div>
+
+    <!-- TAB BASE64 -->
+    <div id="tab2" style="display:none;">
+        <textarea id="base64Input" placeholder="Cola aqui o Base64"></textarea>
+        <button onclick="convertFromBase64()">Converter Base64 → PDF</button>
+    </div>
+
+</div>
+
+<script>
+function toggleInfo() {
+    const box = document.getElementById("infoBox");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+function switchTab(tab) {
+    const isJSON = tab === 1;
+
+    document.getElementById("tab1").style.display = isJSON ? "block" : "none";
+    document.getElementById("tab2").style.display = isJSON ? "none" : "block";
+
+    const infoSection = document.getElementById("infoSection");
+    const infoBox = document.getElementById("infoBox");
+
+    // Mostrar info só no JSON
+    infoSection.style.display = isJSON ? "block" : "none";
+
+    // Fechar box ao trocar
+    infoBox.style.display = "none";
+
+    const tabs = document.querySelectorAll(".tab");
+    tabs.forEach((t, i) => {
+        t.classList.toggle("active", i === tab - 1);
+    });
+}
+
+function sanitizeFileName(name) {
+    return name.replace(/[\\/:*?"<>|]/g, "_");
+}
+
+function base64ToPdf(base64, fileName = "documento") {
+    if (!base64) {
+        alert("Base64 vazio!");
+        return;
+    }
+
+    try {
+        base64 = base64.replace(/^data:application\/pdf;base64,/, "");
+
+        const byteCharacters = atob(base64);
+        const byteNumbers = Array.from(byteCharacters, c => c.charCodeAt(0));
+        const byteArray = new Uint8Array(byteNumbers);
+
+        const blob = new Blob([byteArray], { type: "application/pdf" });
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = sanitizeFileName(fileName) + ".pdf";
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(link.href);
+
+    } catch (err) {
+        alert("Erro: " + err.message);
+    }
+}
+
+function convertFromJSON() {
+    const jsonText = document.getElementById("jsonInput").value;
+
+    try {
+        const obj = JSON.parse(jsonText);
+
+        if (!obj.PDF) {
+            alert("Campo 'PDF' não encontrado!");
+            return;
+        }
+
+        base64ToPdf(obj.PDF, obj.DocumentNumber || "documento");
+
+    } catch {
+        alert("JSON inválido!");
+    }
+}
+
+function convertFromBase64() {
+    const base64 = document.getElementById("base64Input").value;
+    base64ToPdf(base64);
+}
+</script>
+
+</body>
+</html>
